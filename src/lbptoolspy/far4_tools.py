@@ -87,10 +87,10 @@ class SaveKey():
     
     
     def swap_endianness(self):
-        self._save_key_bytes[0:4] = struct.pack('>i',*struct.unpack('<i',self._save_key_bytes[0:4]))
-        self._save_key_bytes[4:4+4] = struct.pack('>i',*struct.unpack('<i',self._save_key_bytes[4:4+4]))
-        self._save_key_bytes[0x34:0x34+4] = struct.pack('>i',*struct.unpack('<i',self._save_key_bytes[0x34:0x34+4]))
-        self._save_key_bytes[0x38:0x38+4] = struct.pack('>i',*struct.unpack('<i',self._save_key_bytes[0x38:0x38+4]))
+        self._save_key_bytes[0:4] = self._save_key_bytes[0:4][::-1]
+        self._save_key_bytes[4:4+4] = self._save_key_bytes[4:4+4][::-1]
+        self._save_key_bytes[0x34:0x34+4] = self._save_key_bytes[0x34:0x34+4][::-1]
+        self._save_key_bytes[0x38:0x38+4] = self._save_key_bytes[0x38:0x38+4][::-1]
     
     @property
     def is_ps4_endian(self) -> bool:
