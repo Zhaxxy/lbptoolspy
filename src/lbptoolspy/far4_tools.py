@@ -31,25 +31,32 @@ class _FAR4TableOffset(NamedTuple):
     file_count: int
 
 
-def _get_far4_table_offset(file_archive: BytesIO) -> _FAR4TableOffset:
-    file_archive.seek(-4,2)
-    farc_revision = file_archive.read(4)
+def _get_far4_table_offset(far4_archive: BytesIO) -> _FAR4TableOffset:
+    far4_archive.seek(-4,2)
+    farc_revision = far4_archive.read(4)
 
     if farc_revision != b'FAR4':
         raise ValueError('Invalid far4 archive passed')
     
-    file_archive.seek(0)
-    file_archive.seek(-8,2)
-    farc_file_count = struct.unpack('>i',file_archive.read(4))[0]
-    file_archive.seek(0,2)
-    farc_size = file_archive.tell()
-    file_archive.seek(0)
+    far4_archive.seek(0)
+    far4_archive.seek(-8,2)
+    farc_file_count = struct.unpack('>i',far4_archive.read(4))[0]
+    far4_archive.seek(0,2)
+    farc_size = far4_archive.tell()
+    far4_archive.seek(0)
     
     return _FAR4TableOffset(table_offset = farc_size - FAR4_TABLE_ENTRY_LENGTH - farc_file_count * FAR4_TABLE_ENTRY_LENGTH, file_count = farc_file_count)
 
 
 class SaveKey():
     __slots__ = ('_save_key_bytes')
+
+    def __init__(self, far4_archive: BytesIO):   
+        table_offset = _get_far4_table_offset(far4_archive).table_offset
+        far4_archive.seek(table_offset-FAR4_SAVE_KEY_LENGTH)
+        
+        self._save_key_bytes = bytearray(far4_archive.read(FAR4_SAVE_KEY_LENGTH))
+
     def __repr__(self) -> str:
         return f'{type(self).__name__}.from_string({str(self)!r})'
     
@@ -70,11 +77,6 @@ class SaveKey():
         my_instance._save_key_bytes = new_save_key
         return my_instance
         
-    def __init__(self, file_archive: BytesIO):   
-        table_offset = _get_far4_table_offset(file_archive).table_offset
-        file_archive.seek(table_offset-FAR4_SAVE_KEY_LENGTH)
-        
-        self._save_key_bytes = bytearray(file_archive.read(FAR4_SAVE_KEY_LENGTH))
     
     @property
     def root_resource_hash(self) -> Annotated[bytes,0x14]:
@@ -85,7 +87,11 @@ class SaveKey():
             raise ValueError('Invalid sha1 hash passed')
         self._save_key_bytes[0x48: 0x48 + 0x14] = value
     
-    
+    def write_to_far4(self, far4_archive: BytesIO):
+        table_offset = _get_far4_table_offset(far4_archive).table_offset
+        far4_archive.seek(table_offset-FAR4_SAVE_KEY_LENGTH)
+        far4_archive.write(bytes(self))
+
     def swap_endianness(self):
         self._save_key_bytes[0:4] = self._save_key_bytes[0:4][::-1]
         self._save_key_bytes[4:4+4] = self._save_key_bytes[4:4+4][::-1]
