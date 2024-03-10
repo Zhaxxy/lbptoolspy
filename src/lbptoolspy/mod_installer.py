@@ -13,6 +13,7 @@ from typing import Sequence
 
 from . import far4_tools
 from . import l0_dec_enc
+from . import binary_files
 
 def get_sha1_hex(data) -> str:
     m = hashlib.sha1()
@@ -343,17 +344,17 @@ _LBP3_SLOT_TEMPLATE = """{
 }"""
 
 
-_TEMPLATE_LEVEL = (Path(__file__).parent / 'LBP1_BIN_ARRAY.json').read_text()
+_TEMPLATE_LEVEL = binary_files.LBP1_BIN_ARRAY
 
-_LEVEL_ICO_TEX =  (Path(__file__).parent / 'image.tex').read_bytes()
+_LEVEL_ICO_TEX =  binary_files.LEVEL_ICO_TEX
 
 _LEVEL_ICO_TEX_HASH = get_sha1_hex(_LEVEL_ICO_TEX)
 
-JSONINATOR_ARGS = ('java','-jar',Path(__file__).parent / 'jsoninator.jar')
+JSONINATOR_ARGS = binary_files.JSONINATOR_ARGS
 
-
-if subprocess.run(JSONINATOR_ARGS,capture_output=True).returncode:
-    raise Exception(f'something went wrong with jsoninator... {test_result.stderr}')
+test_result = subprocess.run(JSONINATOR_ARGS,capture_output=True)
+if test_result.returncode:
+    raise Exception(f'something went wrong with jsoninator... {test_result.stderr}') 
 
 # for hash in _PRIZE_BUBBLE_TEMPLATE_HASHES:
     # assert hash in _TEMPLATE_LEVEL

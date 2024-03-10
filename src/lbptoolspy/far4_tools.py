@@ -8,6 +8,7 @@ import hmac
 import struct
 import zipfile
 import shutil
+from tempfile import TemporaryDirectory
 
 FAR4_SAVE_KEY_LENGTH = 0x84
 FAR4_TABLE_ENTRY_LENGTH = 0x1c
@@ -226,23 +227,21 @@ def files_to_map_lbp3(folder_with_files: Path, output_map: BytesIO):
         output_map.write(struct.pack('>i',i))
 
 def pack_to_mod(folder_with_files_to_pack_to_mod: Path, output_mod: zipfile.ZipFile):
-    TEMP_FOLDER = Path('TEMP_MAKING_MODS_LMAO_13be9f11b3')
-    TEMP_FOLDER.mkdir()
-    try:
-        with open(TEMP_FOLDER / 'data.map','wb') as f:
+
+    with TemporaryDirectory() as tp:
+        with open(tp / 'data.map','wb') as f:
             files_to_map_lbp3(folder_with_files_to_pack_to_mod,f)
 
 
-        pack_far4(folder_with_files_to_pack_to_mod,TEMP_FOLDER / Path('data.farc'))
+        pack_far4(folder_with_files_to_pack_to_mod,tp / Path('data.farc'))
 
-        with open(TEMP_FOLDER / 'config.json','w') as f:
+        with open(tp / 'config.json','w') as f:
             f.write('{"ID":"sample","type":"pack","title":"Untitled Mod","version":"1.0","author":"Sackthing","description":"No description was provided."}')
 
-        output_mod.write(TEMP_FOLDER / 'data.farc', arcname = 'data.farc')
-        output_mod.write(TEMP_FOLDER / 'data.map', arcname = 'data.map')
-        output_mod.write(TEMP_FOLDER / 'config.json', arcname = 'config.json')
-    finally:
-        shutil.rmtree(TEMP_FOLDER)
+        output_mod.write(tp / 'data.farc', arcname = 'data.farc')
+        output_mod.write(tp / 'data.map', arcname = 'data.map')
+        output_mod.write(tp / 'config.json', arcname = 'config.json')
+
 
 """
 def main():
