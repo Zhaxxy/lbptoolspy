@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lbptoolspy"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
   { name="Zhaxxy", email="superyahya03@gmail.com" },
 ]
