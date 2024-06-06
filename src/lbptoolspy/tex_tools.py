@@ -34,6 +34,26 @@ def compress_dds_lbp(dds_bytes: bytes) -> bytes:
     return data.getvalue()
 
 
+def tex2image(tex_img: bytes,/) -> Image.Image:
+    size_of_magics = len(_TEX_HEADER + _SOME_FLAG)
+    data = BytesIO(tex_img)
+    header_magic = data.read(size_of_magics)
+    if header_magic != (_TEX_HEADER + _SOME_FLAG):
+        raise AssertionError(f'Invalid header the tex_img {header_magic}')
+    
+    image_buffer = BytesIO()
+    
+    chunk_amnt, = struct.unpack('>H',data.read(2))
+    
+    chunks_data = [struct.unpack('>2H',data.read(4)) for _ in range(chunk_amnt)]
+    
+    for compressed_size,decompressed_size in chunks_data:
+        image_buffer.write(zlib.decompress(data.read(compressed_size)))
+    image_buffer.seek(0)
+
+    return Image.open(image_buffer)
+
+
 """
 def main():
     hi = Image.open('new_textture.png')
