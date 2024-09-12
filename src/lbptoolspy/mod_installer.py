@@ -409,7 +409,8 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
             subprocess.run(JSONINATOR_ARGS + (Path(temp_dir,'mod_dump',slt_file),Path(temp_dir,'slt_dump.json')),capture_output = True, shell=False)
             slt_json = json.loads(Path(temp_dir,'slt_dump.json').read_text())
             #os.remove(alresdy_bin)
-            slt_json["resource"]["slots"][0]["name"] = 'mods 2 levels'
+            slt_json["resource"]["slots"][0]["name"] = mod_files[0].name
+            slt_json["resource"]["slots"][0]["description"] = ', '.(mod_file.name for mod_file in mod_files)
             slt_json["resource"]["slots"][0]["icon"]["value"] = _LEVEL_ICO_TEX_HASH
             for bin_level_hash in bin_level_hashes:
                 slt_json["resource"]["slots"][0]["root"]["value"] = bin_level_hash
@@ -439,7 +440,9 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                         break
                 else:
                     raise Exception('savefile does not have any free slots')
-
+                
+                slot_template["name"] = mod_files[0].name
+                slot_template["description"] =  = ', '.(mod_file.name for mod_file in mod_files)
                 slot_template["location"] = slot_coord
                 slot_template["id"] = new_id
                 slot_template["root"]["value"] = bin_level_hash
