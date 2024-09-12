@@ -442,7 +442,7 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                     raise Exception('savefile does not have any free slots')
                 
                 slot_template["name"] = mod_files[0].name
-                slot_template["description"] =  = ', '.join(mod_file.name for mod_file in mod_files)
+                slot_template["description"] = ', '.join(mod_file.name for mod_file in mod_files)
                 slot_template["location"] = slot_coord
                 slot_template["id"] = new_id
                 slot_template["root"]["value"] = bin_level_hash
