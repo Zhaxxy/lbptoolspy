@@ -11,9 +11,13 @@ import shutil
 import random
 from typing import Sequence
 
+from PIL import Image
+
 from . import far4_tools
 from . import l0_dec_enc
 from . import binary_files
+from .tex_tools import image2tex
+from .image_helpers import unique_level_badge_image
 
 def get_sha1_hex(data) -> str:
     m = hashlib.sha1()
@@ -346,9 +350,6 @@ _LBP3_SLOT_TEMPLATE = """{
 
 _TEMPLATE_LEVEL = binary_files.LBP1_BIN_ARRAY
 
-_LEVEL_ICO_TEX =  binary_files.LEVEL_ICO_TEX
-
-_LEVEL_ICO_TEX_HASH = get_sha1_hex(_LEVEL_ICO_TEX)
 
 JSONINATOR_ARGS = binary_files.JSONINATOR_ARGS
 
@@ -360,11 +361,10 @@ if test_result.returncode:
     # assert hash in _TEMPLATE_LEVEL
 
 
-def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install_plans: bool = True, is_ps4_level_backup: bool = False):
+def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install_plans: bool = True, is_ps4_level_backup: bool = False) -> Image:
     with tempfile.TemporaryDirectory() as temp_dir:
         os.mkdir(Path(temp_dir,'mod_dump'))
         
-        Path(temp_dir,'mod_dump',_LEVEL_ICO_TEX_HASH + '.tex').write_bytes(_LEVEL_ICO_TEX)
 
         if is_ps4_level_backup:
             bigfart.write_bytes(l0_dec_enc.decrypt_ps4_l0(bigfart.read_bytes()))
@@ -380,6 +380,12 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                 zip_ref.extract('data.farc',temp_dir)
 
             far4_tools.extract_far4(Path(temp_dir,'data.farc'),Path(temp_dir,'mod_dump'))
+        
+        level_icon_cool = unique_level_badge_image()
+        level_icon_cool_tex = image2tex(level_icon_cool)
+        level_icon_cool_hash = get_sha1_hex(level_icon_cool_tex)
+        
+        Path(temp_dir,'mod_dump',level_icon_cool_hash + '.tex').write_bytes(level_icon_cool_tex)
         
         if install_plans:
             plan_hashes = [get_sha1_hex(file.read_bytes()) for file in Path(temp_dir,'mod_dump').iterdir() if file.suffix == '.plan'] 
@@ -410,8 +416,9 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
             slt_json = json.loads(Path(temp_dir,'slt_dump.json').read_text())
             #os.remove(alresdy_bin)
             slt_json["resource"]["slots"][0]["name"] = mod_files[0].name
+            print('ca423tto')
+            slt_json["resource"]["slots"][0]["icon"] = {"value":level_icon_cool_hash,"type": "TEXTURE"}
             slt_json["resource"]["slots"][0]["description"] = ', '.join(mod_file.name for mod_file in mod_files)
-            slt_json["resource"]["slots"][0]["icon"]["value"] = _LEVEL_ICO_TEX_HASH
             for bin_level_hash in bin_level_hashes:
                 slt_json["resource"]["slots"][0]["root"]["value"] = bin_level_hash
             
@@ -442,6 +449,7 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                     raise Exception('savefile does not have any free slots')
                 
                 slot_template["name"] = mod_files[0].name
+                slot_template["icon"] = {"value":level_icon_cool_hash,"type": "TEXTURE"}
                 slot_template["description"] = ', '.join(mod_file.name for mod_file in mod_files)
                 slot_template["location"] = slot_coord
                 slot_template["id"] = new_id
@@ -458,6 +466,9 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                 bpr_hash = bytes.fromhex(get_sha1_hex(Path(temp_dir,'mod_dump',bpr_file).read_bytes()))
                 
                 far4_tools.pack_far4(Path(temp_dir,'mod_dump'),bigfart,save_key,bpr_hash)
+
+    return level_icon_cool
+
 
 def main(args: Sequence[str] = None):
     parser = argparse.ArgumentParser(description='Tool to install .mod files from toolkit/workbench to your bigfart or ps4 level backup, currently only installs as single levels, (.bins)')

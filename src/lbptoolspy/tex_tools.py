@@ -1,18 +1,42 @@
+from pathlib import Path
 import zlib
 from io import BytesIO
 import struct
+from tempfile import TemporaryDirectory
+import subprocess
+from functools import cache
+import logging
 
 from PIL import Image
 
 _TEX_HEADER = b'TEX '
 _SOME_FLAG = b'\x00\x01'
 
+@cache
+def _check_if_magick_is_installed() -> bool:
+    try:
+        subprocess.run(('magick', '-version'), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        return True
+    except Exception:
+        logging.warning('magick was ethier not installed or not installed correctly, consider installing if you want correct .tex files (LittleBigPlanet) (youll need to restart your scripts after installing it)')
+        return False
+
 
 def image2tex(input_image: Image.Image,/) -> bytes:
-    tex_image = BytesIO()
-    input_image.save(tex_image,'dds')
-    
-    return compress_dds_lbp(tex_image.getvalue())
+    if _check_if_magick_is_installed():
+        with TemporaryDirectory() as tp:
+            png_path = Path(tp,'umm.dds')
+            output_dds_path = Path(tp,'output.dds')
+            input_image.save(png_path)
+            subprocess.run(('magick', png_path,'-define','dd:mipmaps=1','-define','dds:compression=dtx5',f'DDS:{output_dds_path}'), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            dds_bytes = output_dds_path.read_bytes()
+    else:
+        tex_image = BytesIO()
+        input_image.save(tex_image,'dds')
+        dds_bytes = tex_image.getvalue()
+        del tex_image
+        
+    return compress_dds_lbp(dds_bytes)
 
 
 def compress_dds_lbp(dds_bytes: bytes) -> bytes:
