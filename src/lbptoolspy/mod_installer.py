@@ -416,7 +416,6 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
             slt_json = json.loads(Path(temp_dir,'slt_dump.json').read_text())
             #os.remove(alresdy_bin)
             slt_json["resource"]["slots"][0]["name"] = mod_files[0].name
-            print('ca423tto')
             slt_json["resource"]["slots"][0]["icon"] = {"value":level_icon_cool_hash,"type": "TEXTURE"}
             slt_json["resource"]["slots"][0]["description"] = ', '.join(mod_file.name for mod_file in mod_files)
             for bin_level_hash in bin_level_hashes:
