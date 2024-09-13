@@ -18,7 +18,7 @@ def _check_if_magick_is_installed() -> bool:
         subprocess.run(('magick', '-version'), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
         return True
     except Exception:
-        logging.warning('magick was ethier not installed or not installed correctly, consider installing if you want correct .tex files (LittleBigPlanet) (youll need to restart your scripts after installing it)')
+        logging.warning('ImageMagick was ethier not installed or not installed correctly, consider installing if you want correct .tex files (LittleBigPlanet) (youll need to restart your scripts after installing it)')
         return False
 
 
