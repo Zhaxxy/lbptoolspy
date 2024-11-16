@@ -3,7 +3,6 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "lbptoolspy"
 version = "1.0.0"
 authors = [
   { name="Zhaxxy", email="superyahya03@gmail.com" },
