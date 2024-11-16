@@ -18,6 +18,7 @@ from . import l0_dec_enc
 from . import binary_files
 from .tex_tools import image2tex
 from .image_helpers import unique_level_badge_image
+from .jsonify_lbp_files import lbpfile2json, json2lbpfile
 
 def get_sha1_hex(data) -> str:
     m = hashlib.sha1()
@@ -353,9 +354,6 @@ _TEMPLATE_LEVEL = binary_files.LBP1_BIN_ARRAY
 
 JSONINATOR_ARGS = binary_files.JSONINATOR_ARGS
 
-test_result = subprocess.run(JSONINATOR_ARGS,capture_output=True)
-if test_result.returncode:
-    raise Exception(f'something went wrong with jsoninator... {test_result.stderr}') 
 
 # for hash in _PRIZE_BUBBLE_TEMPLATE_HASHES:
     # assert hash in _TEMPLATE_LEVEL
@@ -399,11 +397,10 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                     except IndexError:
                         new_lvl = new_lvl.replace(hash,plan_hash_chunk[0])
                 
-                Path(temp_dir,'temp_lvl_json.json').write_text(new_lvl)
-                subprocess.run(JSONINATOR_ARGS + (Path(temp_dir,'temp_lvl_json.json'),Path(temp_dir,'temp_lvl_json.bin')),capture_output = True, shell=False)
-                bin_hash = get_sha1_hex(Path(temp_dir,'temp_lvl_json.bin').read_bytes()) + '.bin'
+                temp_lvl_json_bytes = json2lbpfile(new_lvl)
+                bin_hash = get_sha1_hex(temp_lvl_json_bytes) + '.bin'
                 
-                Path(temp_dir,'mod_dump',bin_hash).write_bytes(Path(temp_dir,'temp_lvl_json.bin').read_bytes())
+                Path(temp_dir,'mod_dump',bin_hash).write_bytes(temp_lvl_json_bytes)
 
 
         bin_level_hashes = [get_sha1_hex(x.read_bytes()) for x in Path(temp_dir,'mod_dump').iterdir() if x.suffix == '.bin']
@@ -412,8 +409,9 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
         
         if is_ps4_level_backup:
             slt_file, = {x for x in Path(temp_dir,'mod_dump').iterdir() if x.suffix == '.slt'}
-            subprocess.run(JSONINATOR_ARGS + (Path(temp_dir,'mod_dump',slt_file),Path(temp_dir,'slt_dump.json')),capture_output = True, shell=False)
-            slt_json = json.loads(Path(temp_dir,'slt_dump.json').read_text())
+            full_slt_file_path = Path(temp_dir,'mod_dump',slt_file)
+            slt_json = lbpfile2json(full_slt_file_path)
+            
             #os.remove(alresdy_bin)
             slt_json["resource"]["slots"][0]["name"] = mod_files[0].name
             slt_json["resource"]["slots"][0]["icon"] = {"value":level_icon_cool_hash,"type": "TEXTURE"}
@@ -421,10 +419,9 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
             for bin_level_hash in bin_level_hashes:
                 slt_json["resource"]["slots"][0]["root"]["value"] = bin_level_hash
             
-            Path(temp_dir,'slt_dump.json').write_text(json.dumps(slt_json))
-            subprocess.run(JSONINATOR_ARGS + (Path(temp_dir,'slt_dump.json'),Path(temp_dir,'mod_dump',slt_file)),capture_output = True, shell=False)
+            json2lbpfile(slt_json,full_slt_file_path)
             
-            far4_tools.pack_far4(Path(temp_dir,'mod_dump'),bigfart,save_key,bytes.fromhex(get_sha1_hex(Path(temp_dir,'mod_dump',slt_file).read_bytes())))
+            far4_tools.pack_far4(Path(temp_dir,'mod_dump'),bigfart,save_key,bytes.fromhex(get_sha1_hex(full_slt_file_path.read_bytes())))
             
             bigfart.write_bytes(l0_dec_enc.encrypt_ps4_l0(bigfart.read_bytes()))
         else:
@@ -436,8 +433,7 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
             else:
                 slots_coords, slot_template = _LBP1_SLOT_COORDINATES,json.loads(_LBP1_SLOT_TEMPLATE)
 
-            subprocess.run(JSONINATOR_ARGS + (Path(temp_dir,'mod_dump',bpr_file),Path(temp_dir,'bpr_dump.json')),capture_output = True, shell=False)
-            bpr_json = json.loads(Path(temp_dir,'bpr_dump.json').read_text())
+            bpr_json = lbpfile2json(Path(temp_dir,'mod_dump',bpr_file))
 
 
             for bin_level_hash in bin_level_hashes:
@@ -456,10 +452,7 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                 
                 bpr_json["resource"]["myMoonSlots"] |= {new_id:slot_template}
                 
-                Path(temp_dir,'bpr_dump.json').write_text(json.dumps(bpr_json))
-                
-                subprocess.run(JSONINATOR_ARGS + (Path(temp_dir,'bpr_dump.json'),Path(temp_dir,'mod_dump',bpr_file)),capture_output = True, shell=False)
-                
+                json2lbpfile(bpr_json,Path(temp_dir,'mod_dump',bpr_file))
 
                 
                 bpr_hash = bytes.fromhex(get_sha1_hex(Path(temp_dir,'mod_dump',bpr_file).read_bytes()))

@@ -13,7 +13,7 @@ from tempfile import TemporaryDirectory
 FAR4_SAVE_KEY_LENGTH = 0x84
 FAR4_TABLE_ENTRY_LENGTH = 0x1c
 
-LBP_FILE_EXTENSIONS = defaultdict(lambda: '',{b'BPRb':'.bpr',b'PLNb':'.plan',b'GMTb':'.gmat',b'LVLb':'.bin',b'SLTb':'.slt'})
+LBP_FILE_EXTENSIONS = defaultdict(lambda: '',{b'BPRb':'.bpr',b'PLNb':'.plan',b'GMTb':'.gmat',b'LVLb':'.bin',b'SLTb':'.slt', b'MSHb':'.mol', b'TEX\x20':'.tex'})
 
 
 @dataclass(slots=True)
@@ -212,9 +212,11 @@ def files_to_map_lbp3(folder_with_files: Path, output_map: BytesIO):
         if file.is_dir(): continue
         file_stat = file.stat()
         
-        output_map.write(struct.pack('>h',len(file.as_posix())))
+        pretty_path = file.relative_to(folder_with_files.parent).as_posix().encode('ascii')
         
-        output_map.write(file.as_posix().encode('ascii'))
+        output_map.write(struct.pack('>h',len(pretty_path)))
+        
+        output_map.write(pretty_path)
 
         output_map.write(struct.pack('>i',int(file_stat.st_mtime)))
         
@@ -229,6 +231,7 @@ def files_to_map_lbp3(folder_with_files: Path, output_map: BytesIO):
 def pack_to_mod(folder_with_files_to_pack_to_mod: Path, output_mod: zipfile.ZipFile):
 
     with TemporaryDirectory() as tp:
+        tp = Path(tp)
         with open(tp / 'data.map','wb') as f:
             files_to_map_lbp3(folder_with_files_to_pack_to_mod,f)
 

@@ -4,13 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lbptoolspy"
-version = "0.7.1"
+version = "1.0.0"
 authors = [
   { name="Zhaxxy", email="superyahya03@gmail.com" },
 ]
 dependencies = [
-	"xxtea",
-	"pillow"
+    "xxtea",
+    "pillow",
+    "platformdirs==2.5.2"
 ]
 description = "Tools used to interface with files and saves from LittleBigPlanet series"
 readme = "README.md"
@@ -25,5 +26,3 @@ license = {file = "LICENSE"}
 [project.urls]
 Homepage = "https://github.com/Zhaxxy/lbptoolspy/"
 Issues = "https://github.com/Zhaxxy/lbptoolspy/issues"
-
-
