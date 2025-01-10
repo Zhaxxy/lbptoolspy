@@ -1,7 +1,8 @@
-from typing import Annotated,NamedTuple
+from typing import Annotated,NamedTuple,BinaryIO
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+import datetime
 from collections import defaultdict
 from hashlib import sha1
 import hmac
@@ -9,6 +10,7 @@ import struct
 import zipfile
 import shutil
 from tempfile import TemporaryDirectory
+from enum import Enum
 
 FAR4_SAVE_KEY_LENGTH = 0x84
 FAR4_TABLE_ENTRY_LENGTH = 0x1c
@@ -30,6 +32,67 @@ class _FAR4TableEntry:
 class _FAR4TableOffset(NamedTuple):
     table_offset: int
     file_count: int
+
+
+class LbpMapRevision(Enum):
+    LBP_VITA = b'\x00\x00\x03\xA8'
+
+
+class LbpMapEntry(NamedTuple):
+    file_path: Path
+    timestamp: datetime.datetime
+    size: int
+    hash: bytes
+    guid: int
+
+
+@dataclass(slots=True, frozen=True)
+class LbpMapFile:
+    revision: LbpMapRevision
+    files: list[LbpMapEntry]
+
+    @classmethod
+    def from_map_file(cls, map_file: BinaryIO,/) -> 'LbpMapFile':
+        revision_bytes = map_file.read(4)
+        try:
+            revision = LbpMapRevision(revision_bytes)
+        except ValueError:
+            map_file.seek(-4,1)
+            raise ValueError(f'Unsupported maps file {revision_bytes.hex(" ")}')
+        
+        if revision == LbpMapRevision.LBP_VITA:
+            file_count, = struct.unpack('>i',map_file.read(4))
+            files = []
+            for _ in range(file_count):
+                file_path_lenght, = struct.unpack('>i',map_file.read(4))
+                file_path = Path(map_file.read(file_path_lenght).decode())
+                
+                timestamp = datetime.datetime.fromtimestamp(struct.unpack('>Q',map_file.read(8))[0],tz=datetime.UTC)
+                size, = struct.unpack('>i',map_file.read(4))
+                hash = map_file.read(0x14)
+                guid, = struct.unpack('>i',map_file.read(4))
+                
+                files.append(LbpMapEntry(file_path=file_path, timestamp=timestamp, size=size, hash=hash, guid=guid))
+        
+        return cls(revision=revision, files=files)
+    
+    def export_to_file(self, out_file: BinaryIO,/) -> None:
+        out_file.seek(0, 2)
+        if out_file.tell():
+            raise ValueError('Please give an empty file to as out_file')
+        out_file.write(self.revision.value)
+        
+        if self.revision == LbpMapRevision.LBP_VITA:
+            out_file.write(struct.pack('>i',len(self.files)))
+            for file in self.files:
+                ready_path = file.file_path.as_posix().encode()
+                out_file.write(struct.pack('>i',len(ready_path)))
+                out_file.write(ready_path)
+                
+                out_file.write(struct.pack('>Q',int(file.timestamp.timestamp())))
+                out_file.write(struct.pack('>i',file.size))
+                out_file.write(file.hash)
+                out_file.write(struct.pack('>i',file.guid))
 
 
 def _get_far4_table_offset(far4_archive: BytesIO) -> _FAR4TableOffset:
