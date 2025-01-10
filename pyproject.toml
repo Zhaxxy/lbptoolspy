@@ -4,14 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lbptoolspy"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
   { name="Zhaxxy", email="superyahya03@gmail.com" },
 ]
 dependencies = [
     "xxtea",
     "pillow",
-    "platformdirs==2.5.2"
 ]
 description = "Tools used to interface with files and saves from LittleBigPlanet series"
 readme = "README.md"
