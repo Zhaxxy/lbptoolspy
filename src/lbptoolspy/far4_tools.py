@@ -186,7 +186,7 @@ class SaveKey():
         return self._save_key_bytes[:4] == b'\xF9\x03\x18\x02' or self._save_key_bytes[:4] == b'\x02\x18\x03\xF9'
 
 
-def extract_far4(file_archive: Path, output_folder: Path) -> SaveKey:
+def extract_far4(file_archive: Path, output_folder: Path,*,verify_hashes: bool = True) -> SaveKey:
     with open(file_archive,'rb') as f:
         table_offset,file_count = _get_far4_table_offset(f)
 
@@ -199,8 +199,16 @@ def extract_far4(file_archive: Path, output_folder: Path) -> SaveKey:
             f.seek(entry_offset,0)
             header: str = LBP_FILE_EXTENSIONS[f.read(4)]
             f.seek(-4,1)
+            data = f.read(entry_length)
+            if verify_hashes:
+                mm = sha1()
+                mm.update(data)
+                real_entry_sha1 = mm.digest()
+                if real_entry_sha1 != entry_sha1:
+                    raise ValueError(f'Extracted file at {hex(entry_offset)} should have hash {entry_sha1.hex()}, instead is {real_entry_sha1.hex()}')
+                
             with open(Path(output_folder,entry_sha1.hex() + header),'wb') as output_file:
-                output_file.write(f.read(entry_length))
+                output_file.write(data)
             f.seek(next_pointer)
         return SaveKey(f)
 
