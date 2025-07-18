@@ -44,7 +44,7 @@ def lbpfile2json(lbp_file: _PathlibPathOrStringPath | bytes | bytearray, write_t
         if test_result.returncode or test_result.stderr:
             raise LbpNormalFileParseError(f'something went wrong parsing the lbp file... {test_result.stderr!r}') 
         
-        result = json.loads(temp_json.read_text())
+        result = json.loads(temp_json.read_text('utf-8'))
     
     return dict(result)
 
