@@ -359,17 +359,20 @@ JSONINATOR_ARGS = binary_files.JSONINATOR_ARGS
     # assert hash in _TEMPLATE_LEVEL
 
 
-def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install_plans: bool = True, is_ps4_level_backup: bool = False) -> Image:
+def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install_plans: bool = True, 
+                            is_ps4_level_backup: bool = False, mod_dump_dir: Path | None = None) -> Image:
     with tempfile.TemporaryDirectory() as temp_dir:
-        os.mkdir(Path(temp_dir,'mod_dump'))
+        if mod_dump_dir is None:
+            mod_dump_dir = Path(temp_dir,'mod_dump')
+            os.mkdir(mod_dump_dir)
         
 
         if is_ps4_level_backup:
             bigfart.write_bytes(l0_dec_enc.decrypt_ps4_l0(bigfart.read_bytes()))
-            # far4_tools.extract_far4(bigfart,Path(temp_dir,'mod_dump'))
-            # alresdy_bin, = {x for x in Path(temp_dir,'mod_dump').iterdir() if x.suffix == '.bin'}
-            # shutil.rmtree(Path(temp_dir,'mod_dump'))
-            # os.mkdir(Path(temp_dir,'mod_dump'))
+            # far4_tools.extract_far4(bigfart,mod_dump_dir)
+            # alresdy_bin, = {x for x in mod_dump_dir.iterdir() if x.suffix == '.bin'}
+            # shutil.rmtree(mod_dump_dir)
+            # os.mkdir(mod_dump_dir)
         
         for mod_file in mod_files:
             with zipfile.ZipFile(mod_file, 'r') as zip_ref:
@@ -377,16 +380,16 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                     raise Exception('mod file too big')
                 zip_ref.extract('data.farc',temp_dir)
 
-            far4_tools.extract_far4(Path(temp_dir,'data.farc'),Path(temp_dir,'mod_dump'))
+            far4_tools.extract_far4(Path(temp_dir,'data.farc'),mod_dump_dir)
         
         level_icon_cool = unique_level_badge_image()
         level_icon_cool_tex = image2tex(level_icon_cool)
         level_icon_cool_hash = get_sha1_hex(level_icon_cool_tex)
         
-        Path(temp_dir,'mod_dump',level_icon_cool_hash + '.tex').write_bytes(level_icon_cool_tex)
+        Path(mod_dump_dir,level_icon_cool_hash + '.tex').write_bytes(level_icon_cool_tex)
         
         if install_plans:
-            plan_hashes = [get_sha1_hex(file.read_bytes()) for file in Path(temp_dir,'mod_dump').iterdir() if file.suffix == '.plan'] 
+            plan_hashes = [get_sha1_hex(file.read_bytes()) for file in mod_dump_dir.iterdir() if file.suffix == '.plan'] 
             plan_hashes = [plan_hashes[i:i+len(_PRIZE_BUBBLE_TEMPLATE_HASHES)] for i in range(0, len(plan_hashes), len(_PRIZE_BUBBLE_TEMPLATE_HASHES))]
             
             for plan_hash_chunk in plan_hashes:
@@ -400,16 +403,16 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                 temp_lvl_json_bytes = json2lbpfile(new_lvl)
                 bin_hash = get_sha1_hex(temp_lvl_json_bytes) + '.bin'
                 
-                Path(temp_dir,'mod_dump',bin_hash).write_bytes(temp_lvl_json_bytes)
+                Path(mod_dump_dir,bin_hash).write_bytes(temp_lvl_json_bytes)
 
 
-        bin_level_hashes = [get_sha1_hex(x.read_bytes()) for x in Path(temp_dir,'mod_dump').iterdir() if x.suffix == '.bin']
-        save_key = far4_tools.extract_far4(bigfart,Path(temp_dir,'mod_dump'))
+        bin_level_hashes = [get_sha1_hex(x.read_bytes()) for x in mod_dump_dir.iterdir() if x.suffix == '.bin']
+        save_key = far4_tools.extract_far4(bigfart,mod_dump_dir)
         
         
         if is_ps4_level_backup:
-            slt_file, = {x for x in Path(temp_dir,'mod_dump').iterdir() if x.suffix == '.slt'}
-            full_slt_file_path = Path(temp_dir,'mod_dump',slt_file)
+            slt_file, = {x for x in mod_dump_dir.iterdir() if x.suffix == '.slt'}
+            full_slt_file_path = Path(mod_dump_dir,slt_file)
             slt_json = lbpfile2json(full_slt_file_path)
             
             #os.remove(alresdy_bin)
@@ -421,11 +424,11 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
             
             json2lbpfile(slt_json,full_slt_file_path)
             
-            far4_tools.pack_far4(Path(temp_dir,'mod_dump'),bigfart,save_key,bytes.fromhex(get_sha1_hex(full_slt_file_path.read_bytes())))
+            far4_tools.pack_far4(mod_dump_dir,bigfart,save_key,bytes.fromhex(get_sha1_hex(full_slt_file_path.read_bytes())))
             
             bigfart.write_bytes(l0_dec_enc.encrypt_ps4_l0(bigfart.read_bytes()))
         else:
-            bpr_file, = {x for x in Path(temp_dir,'mod_dump').iterdir() if x.suffix == '.bpr'}
+            bpr_file, = {x for x in mod_dump_dir.iterdir() if x.suffix == '.bpr'}
 
 
             if save_key.is_lbp3_revision:
@@ -433,7 +436,7 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
             else:
                 slots_coords, slot_template = _LBP1_SLOT_COORDINATES,json.loads(_LBP1_SLOT_TEMPLATE)
 
-            bpr_json = lbpfile2json(Path(temp_dir,'mod_dump',bpr_file))
+            bpr_json = lbpfile2json(Path(mod_dump_dir,bpr_file))
 
 
             for bin_level_hash in bin_level_hashes:
@@ -452,12 +455,12 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                 
                 bpr_json["resource"]["myMoonSlots"] |= {new_id:slot_template}
                 
-                json2lbpfile(bpr_json,Path(temp_dir,'mod_dump',bpr_file))
+                json2lbpfile(bpr_json,Path(mod_dump_dir,bpr_file))
 
                 
-                bpr_hash = bytes.fromhex(get_sha1_hex(Path(temp_dir,'mod_dump',bpr_file).read_bytes()))
+                bpr_hash = bytes.fromhex(get_sha1_hex(Path(mod_dump_dir,bpr_file).read_bytes()))
                 
-                far4_tools.pack_far4(Path(temp_dir,'mod_dump'),bigfart,save_key,bpr_hash)
+                far4_tools.pack_far4(mod_dump_dir,bigfart,save_key,bpr_hash)
 
     return level_icon_cool
 
@@ -478,4 +481,3 @@ def main(args: Sequence[str] = None):
  
 if __name__ == '__main__':
     main()
-
