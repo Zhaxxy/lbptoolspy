@@ -381,7 +381,7 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                         raise Exception('mod file too big')
                     zip_ref.extract('data.farc',temp_dir)
             except (zipfile.BadZipfile,zipfile.LargeZipFile):
-                with open(mod_file, 'r') as f:
+                with open(mod_file, 'rb') as f:
                     if f.read(4) == b'MODb':
                         raise Exception('mods directly from workbench (which are old style mods) are not supported, please open the mod in Craftworld Toolkit (any version after Jan 10, 2023) then save it in order to update it to new mod format')
                 raise
