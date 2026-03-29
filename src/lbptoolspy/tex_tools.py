@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import zlib
 from io import BytesIO
@@ -12,10 +13,15 @@ from PIL import Image
 _TEX_HEADER = b'TEX '
 _SOME_FLAG = b'\x00\x01'
 
+if os.name == "nt":
+    IMAGEMAGICK_EXE_PATH = 'magick'
+else:
+    IMAGEMAGICK_EXE_PATH = 'convert'
+
 @cache
 def _check_if_magick_is_installed() -> bool:
     try:
-        subprocess.run(('magick', '-version'), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        subprocess.run((IMAGEMAGICK_EXE_PATH, '-version'), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
         return True
     except Exception:
         logging.warning('ImageMagick was ethier not installed or not installed correctly, consider installing if you want correct .tex files (LittleBigPlanet) (youll need to restart your scripts after installing it)')
@@ -28,7 +34,7 @@ def image2tex(input_image: Image.Image,/) -> bytes:
             png_path = Path(tp,'umm.dds')
             output_dds_path = Path(tp,'output.dds')
             input_image.save(png_path)
-            subprocess.run(('magick', png_path,'-define','dd:mipmaps=1','-define','dds:compression=dtx5',f'DDS:{output_dds_path}'), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            subprocess.run((IMAGEMAGICK_EXE_PATH, png_path,'-define','dd:mipmaps=1','-define','dds:compression=dtx5',f'DDS:{output_dds_path}'), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
             dds_bytes = output_dds_path.read_bytes()
     else:
         tex_image = BytesIO()
