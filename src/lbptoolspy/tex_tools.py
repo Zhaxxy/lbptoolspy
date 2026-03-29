@@ -18,6 +18,7 @@ if os.name == "nt":
 else:
     IMAGEMAGICK_EXE_PATH = 'convert'
 
+
 @cache
 def _check_if_magick_is_installed() -> bool:
     try:
