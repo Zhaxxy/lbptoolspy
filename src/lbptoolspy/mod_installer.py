@@ -19,6 +19,7 @@ from . import binary_files
 from .tex_tools import image2tex
 from .image_helpers import unique_level_badge_image
 from .jsonify_lbp_files import lbpfile2json, json2lbpfile
+from .extract_old_craftworld_toolkit_mod_format import extract_old_craftworld_toolkit_mod_format
 
 def get_sha1_hex(data) -> str:
     m = hashlib.sha1()
@@ -382,11 +383,13 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                     zip_ref.extract('data.farc',temp_dir)
             except (zipfile.BadZipfile,zipfile.LargeZipFile):
                 with open(mod_file, 'rb') as f:
-                    if f.read(4) == b'MODb':
-                        raise Exception('mods directly from workbench (which are old style mods) are not supported, please open the mod in Craftworld Toolkit (any version after Jan 10, 2023) then save it in order to update it to new mod format')
-                raise
-
-            far4_tools.extract_far4(Path(temp_dir,'data.farc'),mod_dump_dir)
+                    f.seek(0,2)
+                    if f.tell() > 99_000_000:
+                        raise Exception('mod file too big') from None
+                    f.seek(0)
+                    extract_old_craftworld_toolkit_mod_format(f,mod_dump_dir,flat_dir = True)
+            else:
+                far4_tools.extract_far4(Path(temp_dir,'data.farc'),mod_dump_dir)
         
         level_icon_cool = unique_level_badge_image()
         level_icon_cool_tex = image2tex(level_icon_cool)
@@ -487,3 +490,4 @@ def main(args: Sequence[str] = None):
  
 if __name__ == '__main__':
     main()
+
