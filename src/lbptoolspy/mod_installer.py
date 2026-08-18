@@ -360,7 +360,7 @@ JSONINATOR_ARGS = binary_files.JSONINATOR_ARGS
     # assert hash in _TEMPLATE_LEVEL
 
 
-def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install_plans: bool = True, 
+def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path | int],/,*,install_plans: bool = True, 
                             is_ps4_level_backup: bool = False, mod_dump_dir: Path | None = None) -> Image:
     with tempfile.TemporaryDirectory() as temp_dir:
         if mod_dump_dir is None:
@@ -376,6 +376,8 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
             # os.mkdir(mod_dump_dir)
         
         for mod_file in mod_files:
+            if isinstance(mod_file,int):
+                continue
             try:
                 with zipfile.ZipFile(mod_file, 'r') as zip_ref:
                     if zip_ref.getinfo('data.farc').file_size > 99_000_000:
@@ -398,21 +400,29 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
         Path(mod_dump_dir,level_icon_cool_hash + '.tex').write_bytes(level_icon_cool_tex)
         
         if install_plans:
-            plan_hashes = [get_sha1_hex(file.read_bytes()) for file in mod_dump_dir.iterdir() if file.suffix == '.plan'] 
+            plan_hashes = [get_sha1_hex(file.read_bytes()) for file in mod_dump_dir.iterdir() if file.suffix == '.plan']
+            for plan_guid in mod_files:
+                if isinstance(plan_guid,int):
+                    plan_hashes.append(plan_guid)
+            
             plan_hashes = [plan_hashes[i:i+len(_PRIZE_BUBBLE_TEMPLATE_HASHES)] for i in range(0, len(plan_hashes), len(_PRIZE_BUBBLE_TEMPLATE_HASHES))]
             
             for plan_hash_chunk in plan_hashes:
                 new_lvl = _TEMPLATE_LEVEL
                 for index, hash in enumerate(_PRIZE_BUBBLE_TEMPLATE_HASHES):
                     try:
-                        new_lvl = new_lvl.replace(hash,plan_hash_chunk[index])
+                        plan_hash_or_guid = plan_hash_chunk[index]
                     except IndexError:
-                        new_lvl = new_lvl.replace(hash,plan_hash_chunk[0])
+                        plan_hash_or_guid = plan_hash_chunk[0]
+                    if isinstance(plan_hash_or_guid,int):
+                        new_lvl = new_lvl.replace(f'"{hash}"',plan_hash_or_guid)
+                    else:
+                        new_lvl = new_lvl.replace(hash,plan_hash_or_guid)
                 
-                temp_lvl_json_bytes = json2lbpfile(new_lvl)
-                bin_hash = get_sha1_hex(temp_lvl_json_bytes) + '.bin'
-                
-                Path(mod_dump_dir,bin_hash).write_bytes(temp_lvl_json_bytes)
+            temp_lvl_json_bytes = json2lbpfile(new_lvl)
+            bin_hash = get_sha1_hex(temp_lvl_json_bytes) + '.bin'
+            
+            Path(mod_dump_dir,bin_hash).write_bytes(temp_lvl_json_bytes)
 
 
         bin_level_hashes = [get_sha1_hex(x.read_bytes()) for x in mod_dump_dir.iterdir() if x.suffix == '.bin']
@@ -425,9 +435,9 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
             slt_json = lbpfile2json(full_slt_file_path)
             
             #os.remove(alresdy_bin)
-            slt_json["resource"]["slots"][0]["name"] = mod_files[0].name
+            slt_json["resource"]["slots"][0]["name"] = mod_files[0].name if isinstance(mod_files[0],Path) else f'g{mod_files[0]}'
             slt_json["resource"]["slots"][0]["icon"] = {"value":level_icon_cool_hash,"type": "TEXTURE"}
-            slt_json["resource"]["slots"][0]["description"] = ', '.join(mod_file.name for mod_file in mod_files)
+            slt_json["resource"]["slots"][0]["description"] = ', '.join((mod_file.name if isinstance(mod_file,Path) else f'g{mod_file}') for mod_file in mod_files)
             for bin_level_hash in bin_level_hashes:
                 slt_json["resource"]["slots"][0]["root"]["value"] = bin_level_hash
             
@@ -455,9 +465,9 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path],/,*,install
                 else:
                     raise Exception('savefile does not have any free slots')
                 
-                slot_template["name"] = mod_files[0].name
+                slot_template["name"] = mod_files[0].name if isinstance(mod_files[0],Path) else f'g{mod_files[0]}'
                 slot_template["icon"] = {"value":level_icon_cool_hash,"type": "TEXTURE"}
-                slot_template["description"] = ', '.join(mod_file.name for mod_file in mod_files)
+                slot_template["description"] = ', '.join((mod_file.name if isinstance(mod_file,Path) else f'g{mod_file}') for mod_file in mod_files)
                 slot_template["location"] = slot_coord
                 slot_template["id"] = new_id
                 slot_template["root"]["value"] = bin_level_hash
