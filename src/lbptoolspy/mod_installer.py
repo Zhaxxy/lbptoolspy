@@ -417,7 +417,7 @@ def install_mods_to_bigfart(bigfart: Path, mod_files: Sequence[Path | int],/,*,i
                     if isinstance(plan_hash_or_guid,int):
                         new_lvl = new_lvl.replace(f'"{hash}"',plan_hash_or_guid)
                     else:
-                        new_lvl = new_lvl.replace(hash,plan_hash_or_guid)
+                        new_lvl = new_lvl.replace(hash,str(plan_hash_or_guid))
                 
             temp_lvl_json_bytes = json2lbpfile(new_lvl)
             bin_hash = get_sha1_hex(temp_lvl_json_bytes) + '.bin'
