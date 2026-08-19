@@ -41,7 +41,7 @@ def lbpfile2json(lbp_file: _PathlibPathOrStringPath | bytes | bytearray, write_t
             temp_json = Path(write_to_json_file)
         
         test_result = subprocess.run(JSONINATOR_ARGS + (temp_lbp_file,temp_json),capture_output = True, shell=False)
-        if test_result.returncode or test_result.stderr:
+        if test_result.returncode:
             raise LbpNormalFileParseError(f'something went wrong parsing the lbp file... {test_result.stderr!r}') 
         
         result = json.loads(temp_json.read_text('utf-8'))
@@ -66,7 +66,7 @@ def json2lbpfile(json_file: _PathlibPathOrStringPath | dict, write_to_lbp_file: 
             temp_lbp = Path(write_to_lbp_file)
         
         test_result = subprocess.run(JSONINATOR_ARGS + (temp_json,temp_lbp),capture_output = True, shell=False)
-        if test_result.returncode or test_result.stderr:
+        if test_result.returncode:
             raise LbpJsonFileParseError(f'something went wrong parsing the json lbp file... {test_result.stderr!r}') 
         
         return temp_lbp.read_bytes()
